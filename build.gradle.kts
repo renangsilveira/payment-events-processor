@@ -1,0 +1,109 @@
+plugins {
+	java
+	id("org.springframework.boot") version "3.4.1"
+	id("io.spring.dependency-management") version "1.1.7"
+	id("com.github.davidmc24.gradle.avro") version "1.9.1"
+	jacoco
+}
+
+group = "com.renan"
+version = "0.0.1-SNAPSHOT"
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom(configurations.annotationProcessor.get())
+	}
+}
+
+repositories {
+	mavenCentral()
+	maven { url = uri("https://packages.confluent.io/maven/") }
+}
+
+extra["confluentVersion"] = "7.7.1"
+extra["testcontainersVersion"] = "1.20.4"
+
+dependencyManagement {
+	imports {
+		mavenBom("io.confluent:kafka-schema-registry-client:${property("confluentVersion")}")
+	}
+}
+
+dependencies {
+	// Core
+	implementation("org.springframework.boot:spring-boot-starter-web")
+	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+	implementation("org.springframework.boot:spring-boot-starter-validation")
+	implementation("org.springframework.boot:spring-boot-starter-actuator")
+
+	// Kafka
+	implementation("org.springframework.kafka:spring-kafka")
+
+	// Avro + Schema Registry (Confluent)
+	implementation("org.apache.avro:avro:1.12.0")
+	implementation("io.confluent:kafka-avro-serializer:${property("confluentVersion")}")
+	implementation("io.confluent:kafka-schema-registry-client:${property("confluentVersion")}")
+
+	// Database
+	implementation("org.flywaydb:flyway-core")
+	implementation("org.flywaydb:flyway-database-postgresql")
+	runtimeOnly("org.postgresql:postgresql")
+
+	// Observability (Micrometer core now; Prometheus registry added in Phase 9)
+	implementation("io.micrometer:micrometer-registry-prometheus")
+
+	// Lombok (optional but speeds up entity/DTO boilerplate — remove if you prefer not to use it)
+	compileOnly("org.projectlombok:lombok")
+	annotationProcessor("org.projectlombok:lombok")
+
+	// Tests
+	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.springframework.kafka:spring-kafka-test")
+	testImplementation("org.testcontainers:junit-jupiter")
+	testImplementation("org.testcontainers:postgresql")
+	testImplementation("org.testcontainers:kafka")
+	testImplementation("org.springframework.boot:spring-boot-testcontainers")
+	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+dependencyManagement {
+	imports {
+		mavenBom("org.testcontainers:testcontainers-bom:${property("testcontainersVersion")}")
+	}
+}
+
+tasks.withType<Test> {
+	useJUnitPlatform()
+	finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+	dependsOn(tasks.test)
+	reports {
+		xml.required.set(true)
+		html.required.set(true)
+	}
+}
+
+// NOTE: jacocoTestCoverageVerification gate is intentionally NOT wired in yet.
+// It will be added in Phase 10, once there's enough code for an 80% threshold to be meaningful.
+
+avro {
+	setGettersReturnOptional(true)
+	setOptionalGettersForNullableFieldsOnly(true)
+	setFieldVisibility("PRIVATE")
+}
+
+sourceSets {
+	main {
+		java {
+			srcDir("build/generated-main-avro-java")
+		}
+	}
+}
