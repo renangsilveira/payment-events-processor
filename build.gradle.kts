@@ -106,3 +106,47 @@ sourceSets {
 		}
 	}
 }
+
+sourceSets {
+	main {
+		java {
+			srcDir("build/generated-main-avro-java")
+		}
+	}
+	create("integrationTest") {
+		java {
+			srcDir("src/integrationTest/java")
+		}
+		resources {
+			srcDir("src/integrationTest/resources")
+		}
+		compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+		runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+	}
+}
+
+val integrationTestImplementation by configurations.getting {
+	extendsFrom(configurations.testImplementation.get())
+}
+
+val integrationTestRuntimeOnly by configurations.getting {
+	extendsFrom(configurations.testRuntimeOnly.get())
+}
+
+configurations["integrationTestImplementation"].extendsFrom(configurations["testImplementation"])
+configurations["integrationTestRuntimeOnly"].extendsFrom(configurations["testRuntimeOnly"])
+
+val integrationTest = tasks.register<Test>("integrationTest") {
+	description = "Runs integration tests (requires Docker; intended for CI)."
+	group = "verification"
+	testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+	classpath = sourceSets["integrationTest"].runtimeClasspath
+	useJUnitPlatform()
+	shouldRunAfter(tasks.test)
+}
+
+tasks.check {
+	// NOTE: integrationTest is intentionally NOT wired into `check` yet.
+	// It runs only in CI via an explicit `./gradlew integrationTest` step (added in a later phase),
+	// since Testcontainers is unreliable on Apple Silicon + Docker Desktop locally.
+}
