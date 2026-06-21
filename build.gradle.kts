@@ -31,7 +31,7 @@ extra["testcontainersVersion"] = "1.20.4"
 
 dependencyManagement {
 	imports {
-		mavenBom("io.confluent:kafka-schema-registry-client:${property("confluentVersion")}")
+		mavenBom("org.testcontainers:testcontainers-bom:${property("testcontainersVersion")}")
 	}
 }
 
@@ -45,10 +45,15 @@ dependencies {
 	// Kafka
 	implementation("org.springframework.kafka:spring-kafka")
 
-	// Avro + Schema Registry (Confluent)
+	// Avro + Schema Registry (Confluent) — regular dependencies, NOT a BOM
 	implementation("org.apache.avro:avro:1.12.0")
-	implementation("io.confluent:kafka-avro-serializer:${property("confluentVersion")}")
-	implementation("io.confluent:kafka-schema-registry-client:${property("confluentVersion")}")
+	implementation("io.confluent:kafka-avro-serializer:${property("confluentVersion")}") {
+		exclude(group = "org.apache.kafka", module = "kafka-clients")
+	}
+	implementation("io.confluent:kafka-schema-registry-client:${property("confluentVersion")}") {
+		exclude(group = "junit", module = "junit")
+		exclude(group = "org.mockito", module = "mockito-core")
+	}
 
 	// Database
 	implementation("org.flywaydb:flyway-core")
@@ -70,12 +75,6 @@ dependencies {
 	testImplementation("org.testcontainers:kafka")
 	testImplementation("org.springframework.boot:spring-boot-testcontainers")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-dependencyManagement {
-	imports {
-		mavenBom("org.testcontainers:testcontainers-bom:${property("testcontainersVersion")}")
-	}
 }
 
 tasks.withType<Test> {
