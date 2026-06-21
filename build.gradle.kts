@@ -2,7 +2,7 @@ plugins {
 	java
 	id("org.springframework.boot") version "3.4.1"
 	id("io.spring.dependency-management") version "1.1.7"
-	id("com.github.davidmc24.gradle.avro") version "1.9.1"
+	id("com.github.davidmc24.gradle.plugin.avro") version "1.9.1"
 	jacoco
 }
 
