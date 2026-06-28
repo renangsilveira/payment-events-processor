@@ -43,7 +43,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 
 	// API Documentation
-	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17")
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14")
 
 	// Kafka
 	implementation("org.springframework.kafka:spring-kafka")
