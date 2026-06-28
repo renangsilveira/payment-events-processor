@@ -36,6 +36,9 @@ public class Payment {
     @Column(name = "idempotency_key", nullable = false, unique = true)
     private String idempotencyKey;
 
+    @Column(name = "request_fingerprint", nullable = false, length = 64)
+    private String requestFingerprint;
+
     @Version
     @Column(name = "version", nullable = false)
     private Long version;
@@ -52,15 +55,17 @@ public class Payment {
         // required by JPA
     }
 
-    private Payment(UUID id, Long amountCents, String currency, PaymentStatus status, String idempotencyKey) {
+    private Payment(UUID id, Long amountCents, String currency, PaymentStatus status,
+                    String idempotencyKey, String requestFingerprint) {
         this.id = id;
         this.amountCents = amountCents;
         this.currency = currency;
         this.status = status;
         this.idempotencyKey = idempotencyKey;
+        this.requestFingerprint = requestFingerprint;
     }
 
-    public static Payment createPending(Long amountCents, String currency, String idempotencyKey) {
+    public static Payment createPending(Long amountCents, String currency, String idempotencyKey, String requestFingerprint) {
         if (amountCents == null || amountCents <= 0) {
             throw new IllegalArgumentException("amountCents must be a positive value");
         }
@@ -70,7 +75,14 @@ public class Payment {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             throw new IllegalArgumentException("idempotencyKey must not be blank");
         }
-        return new Payment(null, amountCents, currency, PaymentStatus.PENDING, idempotencyKey);
+        if (requestFingerprint == null || requestFingerprint.isBlank()) {
+            throw new IllegalArgumentException("requestFingerprint must not be blank");
+        }
+        return new Payment(null, amountCents, currency, PaymentStatus.PENDING, idempotencyKey, requestFingerprint);
+    }
+
+    public boolean matchesFingerprint(String otherFingerprint) {
+        return this.requestFingerprint.equals(otherFingerprint);
     }
 
     public void markProcessing() {
@@ -103,6 +115,10 @@ public class Payment {
 
     public String getIdempotencyKey() {
         return idempotencyKey;
+    }
+
+    public String getRequestFingerprint() {
+        return requestFingerprint;
     }
 
     public Long getVersion() {

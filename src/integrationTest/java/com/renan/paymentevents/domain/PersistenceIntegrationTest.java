@@ -34,7 +34,7 @@ class PersistenceIntegrationTest {
 
     @Test
     void persistsAndRetrievesPaymentByIdempotencyKey() {
-        Payment payment = Payment.createPending(1500L, "USD", "idem-key-001");
+        Payment payment = Payment.createPending(1500L, "USD", "idem-key-001", "fake-fingerprint-for-test");
 
         Payment saved = paymentRepository.save(payment);
 
@@ -48,10 +48,10 @@ class PersistenceIntegrationTest {
 
     @Test
     void rejectsDuplicateIdempotencyKey() {
-        paymentRepository.save(Payment.createPending(1000L, "USD", "duplicate-key"));
+        paymentRepository.save(Payment.createPending(1000L, "USD", "duplicate-key", "fake-fingerprint-for-test"));
         paymentRepository.flush();
 
-        Payment duplicate = Payment.createPending(2000L, "USD", "duplicate-key");
+        Payment duplicate = Payment.createPending(2000L, "USD", "duplicate-key", "fake-fingerprint-for-test");
 
         assertThatThrownBy(() -> {
             paymentRepository.save(duplicate);
