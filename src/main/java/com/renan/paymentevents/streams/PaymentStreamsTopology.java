@@ -80,4 +80,8 @@ public class PaymentStreamsTopology {
         serde.configure(Map.of("schema.registry.url", schemaRegistryUrl), false);
         return serde;
     }
+
+    public void setSchemaRegistryUrl(String schemaRegistryUrl) {
+        this.schemaRegistryUrl = schemaRegistryUrl;
+    }
 }
