@@ -55,7 +55,7 @@ dependencies {
 	// Kafka Streams
 	implementation("org.apache.kafka:kafka-streams")
 	implementation("io.confluent:kafka-streams-avro-serde:${property("confluentVersion")}")
-
+	testImplementation("org.apache.kafka:kafka-streams-test-utils")
 
 	// Avro + Schema Registry (Confluent) — regular dependencies, NOT a BOM
 	implementation("org.apache.avro:avro:1.12.0")
