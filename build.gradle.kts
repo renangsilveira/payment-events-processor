@@ -52,6 +52,11 @@ dependencies {
 	// Kafka
 	implementation("org.springframework.kafka:spring-kafka")
 
+	// Kafka Streams
+	implementation("org.apache.kafka:kafka-streams")
+	implementation("io.confluent:kafka-streams-avro-serde:${property("confluentVersion")}")
+
+
 	// Avro + Schema Registry (Confluent) — regular dependencies, NOT a BOM
 	implementation("org.apache.avro:avro:1.12.0")
 	implementation("io.confluent:kafka-avro-serializer:${property("confluentVersion")}") {
