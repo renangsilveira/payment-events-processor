@@ -1,0 +1,36 @@
+{
+  "namespace": "com.renan.paymentevents.avro",
+  "type": "record",
+  "name": "PaymentResultEvent",
+  "fields": [
+    {
+      "name": "paymentId",
+      "type": "string",
+      "doc": "UUID of the payment, as string"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "doc": "Payment status at the time of the result (e.g. AUTHORIZED, FAILED)"
+    },
+    {
+      "name": "result",
+      "type": "string",
+      "doc": "Processing result: SUCCESS or FAILURE"
+    },
+    {
+      "name": "errorMessage",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Error message when result is FAILURE, null otherwise"
+    },
+    {
+      "name": "occurredAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Event timestamp in milliseconds since epoch"
+    }
+  ]
+}
