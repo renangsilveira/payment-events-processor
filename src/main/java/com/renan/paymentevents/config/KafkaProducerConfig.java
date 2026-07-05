@@ -30,7 +30,7 @@ public class KafkaProducerConfig {
         return new DefaultKafkaProducerFactory<>(producerProps());
     }
 
-    @Bean
+    @Bean("defaultRetryTopicKafkaTemplate")
     public KafkaTemplate<String, PaymentEvent> kafkaTemplate(
             ProducerFactory<String, PaymentEvent> paymentEventProducerFactory) {
         return new KafkaTemplate<>(paymentEventProducerFactory);
