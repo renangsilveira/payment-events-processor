@@ -42,6 +42,10 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 
+	// Distributed scheduling lock
+	implementation("net.javacrumbs.shedlock:shedlock-spring:7.7.0")
+	implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:7.7.0")
+
 	// API Documentation
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14")
 
