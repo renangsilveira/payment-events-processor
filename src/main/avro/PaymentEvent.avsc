@@ -1,0 +1,38 @@
+{
+  "namespace": "com.renan.paymentevents.avro",
+  "type": "record",
+  "name": "PaymentEvent",
+  "fields": [
+    {
+      "name": "paymentId",
+      "type": "string",
+      "doc": "UUID of the payment, as string"
+    },
+    {
+      "name": "amountCents",
+      "type": "long",
+      "doc": "Payment amount in cents (e.g. 1500 = $15.00)"
+    },
+    {
+      "name": "currency",
+      "type": "string",
+      "doc": "ISO 4217 currency code (e.g. USD, BRL)"
+    },
+    {
+      "name": "idempotencyKey",
+      "type": "string",
+      "doc": "Client-supplied idempotency key from the original request"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "doc": "Payment status at the time of the event (e.g. PENDING)"
+    },
+    {
+      "name": "occurredAt",
+      "type": "long",
+      "logicalType": "timestamp-millis",
+      "doc": "Event timestamp in milliseconds since epoch"
+    }
+  ]
+}
