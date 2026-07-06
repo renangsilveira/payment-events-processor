@@ -105,6 +105,7 @@ dependencies {
 	testImplementation("org.testcontainers:kafka")
 	testImplementation("org.springframework.boot:spring-boot-testcontainers")
 	testImplementation("io.grpc:grpc-testing:1.63.0")
+	testImplementation("net.devh:grpc-client-spring-boot-starter:3.1.0.RELEASE")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
