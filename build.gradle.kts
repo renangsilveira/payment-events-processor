@@ -1,3 +1,12 @@
+buildscript {
+	repositories {
+		gradlePluginPortal()
+		mavenCentral()
+	}
+	dependencies {
+		classpath("com.google.protobuf:protobuf-gradle-plugin:0.9.4")
+	}
+}
 plugins {
 	java
 	id("org.springframework.boot") version "3.4.1"
@@ -5,6 +14,8 @@ plugins {
 	id("com.github.davidmc24.gradle.plugin.avro") version "1.9.1"
 	jacoco
 }
+
+apply(plugin = "com.google.protobuf")
 
 group = "com.renan"
 version = "0.0.1-SNAPSHOT"
@@ -57,7 +68,7 @@ dependencies {
 	implementation("io.confluent:kafka-streams-avro-serde:${property("confluentVersion")}")
 	testImplementation("org.apache.kafka:kafka-streams-test-utils")
 
-	// Avro + Schema Registry (Confluent) — regular dependencies, NOT a BOM
+	// Avro + Schema Registry (Confluent)
 	implementation("org.apache.avro:avro:1.12.0")
 	implementation("io.confluent:kafka-avro-serializer:${property("confluentVersion")}") {
 		exclude(group = "org.apache.kafka", module = "kafka-clients")
@@ -73,12 +84,18 @@ dependencies {
 	implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.15.3")
 	runtimeOnly("org.postgresql:postgresql")
 
-	// Observability (Micrometer core now; Prometheus registry added in Phase 9)
+	// Observability
 	implementation("io.micrometer:micrometer-registry-prometheus")
 
-	// Lombok (optional but speeds up entity/DTO boilerplate — remove if you prefer not to use it)
+	// Lombok
 	compileOnly("org.projectlombok:lombok")
 	annotationProcessor("org.projectlombok:lombok")
+
+	// gRPC
+	implementation("net.devh:grpc-server-spring-boot-starter:3.1.0.RELEASE")
+	implementation("io.grpc:grpc-stub:1.68.1")
+	implementation("io.grpc:grpc-protobuf:1.68.1")
+	compileOnly("org.apache.tomcat:annotations-api:6.0.53")
 
 	// Tests
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -87,6 +104,7 @@ dependencies {
 	testImplementation("org.testcontainers:postgresql")
 	testImplementation("org.testcontainers:kafka")
 	testImplementation("org.springframework.boot:spring-boot-testcontainers")
+	testImplementation("io.grpc:grpc-testing:1.68.1")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -103,19 +121,26 @@ tasks.jacocoTestReport {
 	}
 }
 
-// NOTE: jacocoTestCoverageVerification gate is intentionally NOT wired in yet.
-// It will be added in Phase 10, once there's enough code for an 80% threshold to be meaningful.
-
 avro {
 	setGettersReturnOptional(true)
 	setOptionalGettersForNullableFieldsOnly(true)
 	setFieldVisibility("PRIVATE")
 }
 
-sourceSets {
-	main {
-		java {
-			srcDir("build/generated-main-avro-java")
+extensions.configure<com.google.protobuf.gradle.ProtobufExtension> {
+	protoc {
+		artifact = "com.google.protobuf:protoc:3.25.5"
+	}
+	plugins {
+		create("grpc") {
+			artifact = "io.grpc:protoc-gen-grpc-java:1.68.1"
+		}
+	}
+	generateProtoTasks {
+		all().configureEach {
+			plugins {
+				create("grpc")
+			}
 		}
 	}
 }
@@ -124,6 +149,8 @@ sourceSets {
 	main {
 		java {
 			srcDir("build/generated-main-avro-java")
+			srcDir("build/generated/source/proto/main/grpc")
+			srcDir("build/generated/source/proto/main/java")
 		}
 	}
 	create("integrationTest") {
@@ -159,7 +186,5 @@ val integrationTest = tasks.register<Test>("integrationTest") {
 }
 
 tasks.check {
-	// NOTE: integrationTest is intentionally NOT wired into `check` yet.
-	// It runs only in CI via an explicit `./gradlew integrationTest` step (added in a later phase),
-	// since Testcontainers is unreliable on Apple Silicon + Docker Desktop locally.
+	// integrationTest not wired into check — runs only in CI explicitly
 }
