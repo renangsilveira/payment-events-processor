@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package com.renan.paymentevents.grpc;
+
+option java_package = "com.renan.paymentevents.grpc";
+option java_multiple_files = true;
+option java_outer_classname = "PaymentStatusProto";
+
+service PaymentStatusService {
+  rpc GetPaymentStatus (GetPaymentStatusRequest) returns (GetPaymentStatusResponse);
+}
+
+message GetPaymentStatusRequest {
+  string payment_id = 1;
+}
+
+message GetPaymentStatusResponse {
+  string payment_id = 1;
+  string status = 2;
+  int64 amount_cents = 3;
+  string currency = 4;
+  string created_at = 5;
+  bool found = 6;
+}
