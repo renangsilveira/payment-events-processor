@@ -93,8 +93,8 @@ dependencies {
 
 	// gRPC
 	implementation("net.devh:grpc-server-spring-boot-starter:3.1.0.RELEASE")
-	implementation("io.grpc:grpc-stub:1.68.1")
-	implementation("io.grpc:grpc-protobuf:1.68.1")
+	implementation("io.grpc:grpc-stub:1.63.0")
+	implementation("io.grpc:grpc-protobuf:1.63.0")
 	compileOnly("org.apache.tomcat:annotations-api:6.0.53")
 
 	// Tests
@@ -104,7 +104,7 @@ dependencies {
 	testImplementation("org.testcontainers:postgresql")
 	testImplementation("org.testcontainers:kafka")
 	testImplementation("org.springframework.boot:spring-boot-testcontainers")
-	testImplementation("io.grpc:grpc-testing:1.68.1")
+	testImplementation("io.grpc:grpc-testing:1.63.0")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
