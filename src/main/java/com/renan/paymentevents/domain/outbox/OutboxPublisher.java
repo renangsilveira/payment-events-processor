@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renan.paymentevents.avro.PaymentEvent;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,13 +26,16 @@ public class OutboxPublisher {
     private final OutboxEventRepository outboxEventRepository;
     private final KafkaTemplate<String, PaymentEvent> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final CircuitBreaker circuitBreaker;
 
     public OutboxPublisher(OutboxEventRepository outboxEventRepository,
                            KafkaTemplate<String, PaymentEvent> kafkaTemplate,
-                           ObjectMapper objectMapper) {
+                           ObjectMapper objectMapper,
+                           CircuitBreaker kafkaPublishCircuitBreaker) {
         this.outboxEventRepository = outboxEventRepository;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
+        this.circuitBreaker = kafkaPublishCircuitBreaker;
     }
 
     @Scheduled(fixedDelayString = "${outbox.publisher.fixed-delay-ms:5000}")
@@ -53,10 +57,20 @@ public class OutboxPublisher {
         for (OutboxEvent event : pendingEvents) {
             try {
                 PaymentEvent avroEvent = toAvroEvent(event);
-                kafkaTemplate.send(TOPIC, event.getAggregateId().toString(), avroEvent).get();
+
+                circuitBreaker.executeSupplier(() -> {
+                    try {
+                        kafkaTemplate.send(TOPIC, event.getAggregateId().toString(), avroEvent).get();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    return null;
+                });
+
                 event.markPublished();
                 log.info("OutboxPublisher: published event {} for aggregate {}",
                         event.getId(), event.getAggregateId());
+
             } catch (Exception ex) {
                 log.error("OutboxPublisher: failed to publish event {} (retry {}/{}): {}",
                         event.getId(), event.getRetryCount() + 1, MAX_RETRIES, ex.getMessage());
