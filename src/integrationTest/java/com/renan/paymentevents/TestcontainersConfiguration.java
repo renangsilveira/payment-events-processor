@@ -10,6 +10,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
+import java.time.Duration;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfiguration {
@@ -45,7 +46,9 @@ public class TestcontainersConfiguration {
 				.withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:8081")
 				.withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS",
 						"PLAINTEXT://kafka:9092")
-				.waitingFor(Wait.forHttp("/subjects").forStatusCode(200))
+				.waitingFor(Wait.forHttp("/subjects")
+						.forStatusCode(200)
+						.withStartupTimeout(Duration.ofSeconds(120)))
 				.dependsOn(kafkaContainer);
 	}
 
