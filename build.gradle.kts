@@ -97,6 +97,10 @@ dependencies {
 	implementation("io.grpc:grpc-protobuf:1.63.0")
 	compileOnly("org.apache.tomcat:annotations-api:6.0.53")
 
+	// Resilience4j
+	implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
+	implementation("org.springframework.boot:spring-boot-starter-aop")
+
 	// Tests
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.kafka:spring-kafka-test")
