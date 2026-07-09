@@ -3,7 +3,7 @@ package com.renan.paymentevents;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
-import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -36,9 +36,8 @@ public class TestcontainersConfiguration {
 	@Bean
 	public GenericContainer<?> schemaRegistryContainer(
 			KafkaContainer kafkaContainer,
-			Network testNetwork,
-			DynamicPropertyRegistry registry) {
-		GenericContainer<?> schemaRegistry = new GenericContainer<>(
+			Network testNetwork) {
+		return new GenericContainer<>(
 				DockerImageName.parse("confluentinc/cp-schema-registry:7.7.1"))
 				.withNetwork(testNetwork)
 				.withExposedPorts(8081)
@@ -48,10 +47,15 @@ public class TestcontainersConfiguration {
 						"PLAINTEXT://kafka:9092")
 				.waitingFor(Wait.forHttp("/subjects").forStatusCode(200))
 				.dependsOn(kafkaContainer);
+	}
 
-		registry.add("spring.kafka.properties.schema.registry.url",
-				() -> "http://" + schemaRegistry.getHost() + ":" + schemaRegistry.getMappedPort(8081));
-
-		return schemaRegistry;
+	@Bean
+	public DynamicPropertyRegistrar schemaRegistryProperties(
+			GenericContainer<?> schemaRegistryContainer) {
+		return registry -> registry.add(
+				"spring.kafka.properties.schema.registry.url",
+				() -> "http://" + schemaRegistryContainer.getHost()
+						+ ":" + schemaRegistryContainer.getMappedPort(8081)
+		);
 	}
 }
