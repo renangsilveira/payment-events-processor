@@ -160,6 +160,10 @@ sourceSets {
 	}
 }
 
+tasks.named<ProcessResources>("processIntegrationTestResources") {
+	duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
 val integrationTestImplementation by configurations.getting {
 	extendsFrom(configurations.testImplementation.get())
 }
