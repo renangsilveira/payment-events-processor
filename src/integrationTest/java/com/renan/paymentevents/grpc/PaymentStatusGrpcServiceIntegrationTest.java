@@ -1,6 +1,6 @@
 package com.renan.paymentevents.grpc;
 
-import com.renan.paymentevents.TestcontainersConfiguration;
+import com.renan.paymentevents.LightweightTestcontainersConfiguration;
 import com.renan.paymentevents.domain.payment.Payment;
 import com.renan.paymentevents.domain.payment.PaymentRepository;
 import net.devh.boot.grpc.client.inject.GrpcClient;
@@ -14,7 +14,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Import(TestcontainersConfiguration.class)
+@Import(LightweightTestcontainersConfiguration.class)
 @SpringBootTest(properties = {
         "grpc.server.in-process-name=test",
         "grpc.server.port=-1",

@@ -1,6 +1,6 @@
 package com.renan.paymentevents.domain;
 
-import com.renan.paymentevents.TestcontainersConfiguration;
+import com.renan.paymentevents.LightweightTestcontainersConfiguration;
 import com.renan.paymentevents.domain.idempotency.ProcessedEvent;
 import com.renan.paymentevents.domain.idempotency.ProcessedEventRepository;
 import com.renan.paymentevents.domain.outbox.OutboxEvent;
@@ -19,7 +19,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Import(TestcontainersConfiguration.class)
+@Import(LightweightTestcontainersConfiguration.class)
 @SpringBootTest
 class PersistenceIntegrationTest {
 

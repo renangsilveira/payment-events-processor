@@ -1,6 +1,6 @@
 package com.renan.paymentevents.api.payment;
 
-import com.renan.paymentevents.TestcontainersConfiguration;
+import com.renan.paymentevents.LightweightTestcontainersConfiguration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Import(TestcontainersConfiguration.class)
+@Import(LightweightTestcontainersConfiguration.class)
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
