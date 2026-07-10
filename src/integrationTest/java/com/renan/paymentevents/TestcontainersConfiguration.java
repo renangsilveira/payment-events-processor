@@ -10,6 +10,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
+
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.Duration;
 
 @TestConfiguration(proxyBeanMethods = false)
@@ -60,5 +63,17 @@ public class TestcontainersConfiguration {
 				() -> "http://" + schemaRegistryContainer.getHost()
 						+ ":" + schemaRegistryContainer.getMappedPort(8081)
 		);
+	}
+
+	@Bean
+	public DynamicPropertyRegistrar kafkaStreamsStateDir() {
+		return registry -> {
+			try {
+				String tempDir = Files.createTempDirectory("kafka-streams-test-").toString();
+				registry.add("spring.kafka.streams.state-dir", () -> tempDir);
+			} catch (IOException e) {
+				throw new RuntimeException("Failed to create temp dir for Kafka Streams state", e);
+			}
+		};
 	}
 }
