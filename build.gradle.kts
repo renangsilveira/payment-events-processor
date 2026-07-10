@@ -183,6 +183,7 @@ val integrationTest = tasks.register<Test>("integrationTest") {
 	useJUnitPlatform()
 	shouldRunAfter(tasks.test)
 	finalizedBy("jacocoIntegrationTestReport")
+	systemProperty("spring.profiles.active", "integrationtest")
 }
 
 // ─── JaCoCo ────────────────────────────────────────────────────────────────

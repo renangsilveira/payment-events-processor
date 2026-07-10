@@ -10,6 +10,8 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -59,6 +61,10 @@ public class TestcontainersConfiguration {
 				.waitingFor(Wait.forHttp("/subjects")
 						.forStatusCode(200)
 						.withStartupTimeout(Duration.ofSeconds(180)))
+				.withLogConsumer(new Slf4jLogConsumer(
+						LoggerFactory.getLogger("SchemaRegistry")))
+				.withLogConsumer(new org.testcontainers.containers.output.Slf4jLogConsumer(
+						org.slf4j.LoggerFactory.getLogger("SchemaRegistryContainer")))
 				.dependsOn(kafkaContainer);
 	}
 
