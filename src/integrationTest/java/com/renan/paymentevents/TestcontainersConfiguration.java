@@ -6,8 +6,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -41,6 +41,12 @@ public class TestcontainersConfiguration {
 	public GenericContainer<?> schemaRegistryContainer(
 			KafkaContainer kafkaContainer,
 			Network testNetwork) {
+
+		// KafkaContainer (apache/kafka-native) uses port 9092 internally
+		// but we need to use the bootstrap servers that KafkaContainer exposes
+		// on the shared network. The internal listener is on port 9092.
+		String internalBootstrapServers = "kafka:9092";
+
 		return new GenericContainer<>(
 				DockerImageName.parse("confluentinc/cp-schema-registry:7.7.1"))
 				.withNetwork(testNetwork)
@@ -48,10 +54,11 @@ public class TestcontainersConfiguration {
 				.withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry")
 				.withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:8081")
 				.withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS",
-						"PLAINTEXT://kafka:9092")
+						"PLAINTEXT://" + internalBootstrapServers)
+				.withEnv("SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL", "PLAINTEXT")
 				.waitingFor(Wait.forHttp("/subjects")
 						.forStatusCode(200)
-						.withStartupTimeout(Duration.ofSeconds(120)))
+						.withStartupTimeout(Duration.ofSeconds(180)))
 				.dependsOn(kafkaContainer);
 	}
 
