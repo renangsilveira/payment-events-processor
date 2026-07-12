@@ -6,9 +6,9 @@ import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
@@ -19,11 +19,11 @@ import java.util.Map;
 @Configuration
 public class KafkaProducerConfig {
 
-    @Value("${spring.kafka.bootstrap-servers}")
-    private String bootstrapServers;
+    private final Environment environment;
 
-    @Value("${spring.kafka.properties.schema.registry.url}")
-    private String schemaRegistryUrl;
+    public KafkaProducerConfig(Environment environment) {
+        this.environment = environment;
+    }
 
     @Bean
     public ProducerFactory<String, PaymentEvent> paymentEventProducerFactory() {
@@ -48,6 +48,15 @@ public class KafkaProducerConfig {
     }
 
     private Map<String, Object> producerProps() {
+        // Read schema.registry.url at bean creation time via Environment,
+        // which is resolved AFTER DynamicPropertyRegistrar beans have run.
+        // This allows Testcontainers to override the URL before the producer
+        // factory is created, fixing the test isolation issue.
+        String schemaRegistryUrl = environment.getRequiredProperty(
+                "spring.kafka.properties.schema.registry.url");
+        String bootstrapServers = environment.getRequiredProperty(
+                "spring.kafka.bootstrap-servers");
+
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
