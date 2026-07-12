@@ -36,21 +36,19 @@ public class TestcontainersConfiguration {
 	}
 
 	@Bean
-	public GenericContainer<?> schemaRegistryContainer(
-			KafkaContainer kafkaContainer,
-			Network testNetwork) {
+	public GenericContainer<?> schemaRegistryContainer(Network testNetwork) {
+		// Using Apicurio Registry (in-memory mode) instead of Confluent Schema Registry.
+		// Apicurio is much lighter (~50MB vs ~700MB) and starts in seconds vs minutes,
+		// making it suitable for CI environments. It exposes a Confluent-compatible API
+		// at /apis/ccompat/v7, so KafkaAvroSerializer works without any code changes.
 		return new GenericContainer<>(
-				DockerImageName.parse("confluentinc/cp-schema-registry:7.7.1"))
+				DockerImageName.parse("apicurio/apicurio-registry-mem:2.6.2.Final"))
 				.withNetwork(testNetwork)
-				.withExposedPorts(8081)
-				.withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry")
-				.withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:8081")
-				.withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", "PLAINTEXT://kafka:9092")
-				.withEnv("SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL", "PLAINTEXT")
-				.waitingFor(Wait.forHttp("/subjects")
+				.withExposedPorts(8080)
+				.waitingFor(Wait.forHttp("/apis/ccompat/v7/subjects")
 						.forStatusCode(200)
-						.withStartupTimeout(Duration.ofSeconds(180)))
-				.dependsOn(kafkaContainer);
+						.withStartupTimeout(Duration.ofSeconds(60)))
+				.withNetworkAliases("schema-registry");
 	}
 
 	@Bean
@@ -59,7 +57,8 @@ public class TestcontainersConfiguration {
 		return registry -> registry.add(
 				"spring.kafka.properties.schema.registry.url",
 				() -> "http://" + schemaRegistryContainer.getHost()
-						+ ":" + schemaRegistryContainer.getMappedPort(8081)
+						+ ":" + schemaRegistryContainer.getMappedPort(8080)
+						+ "/apis/ccompat/v7"
 		);
 	}
 }
