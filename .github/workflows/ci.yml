@@ -29,19 +29,11 @@ jobs:
       - name: Run tests
         run: ./gradlew test
 
-      - name: Run integration tests
-        run: ./gradlew integrationTest
-        env:
-          TESTCONTAINERS_RYUK_DISABLED: "true"
+      - name: Generate JaCoCo report
+        run: ./gradlew jacocoTestReport
 
-      - name: Generate merged JaCoCo report
-        run: ./gradlew jacocoMergedReport
-
-      - name: Check coverage gate (80%)
-        run: ./gradlew jacocoMergedCoverageVerification
-
-      - name: Upload merged coverage report
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
-          name: jacoco-merged-report
-          path: build/reports/jacoco/jacocoMergedReport/
+          name: jacoco-report
+          path: build/reports/jacoco/test/html

@@ -11,4 +11,5 @@ class PaymentEventsProcessorApplicationTests {
 	@Test
 	void contextLoads() {
 	}
+
 }

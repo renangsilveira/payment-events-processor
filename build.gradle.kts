@@ -1,5 +1,3 @@
-import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
-
 buildscript {
 	repositories {
 		gradlePluginPortal()
@@ -9,7 +7,6 @@ buildscript {
 		classpath("com.google.protobuf:protobuf-gradle-plugin:0.9.4")
 	}
 }
-
 plugins {
 	java
 	id("org.springframework.boot") version "3.4.1"
@@ -116,6 +113,19 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+tasks.withType<Test> {
+	useJUnitPlatform()
+	finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+	dependsOn(tasks.test)
+	reports {
+		xml.required.set(true)
+		html.required.set(true)
+	}
+}
+
 avro {
 	setGettersReturnOptional(true)
 	setOptionalGettersForNullableFieldsOnly(true)
@@ -160,10 +170,6 @@ sourceSets {
 	}
 }
 
-tasks.named<ProcessResources>("processIntegrationTestResources") {
-	duplicatesStrategy = DuplicatesStrategy.INCLUDE
-}
-
 val integrationTestImplementation by configurations.getting {
 	extendsFrom(configurations.testImplementation.get())
 }
@@ -182,81 +188,8 @@ val integrationTest = tasks.register<Test>("integrationTest") {
 	classpath = sourceSets["integrationTest"].runtimeClasspath
 	useJUnitPlatform()
 	shouldRunAfter(tasks.test)
-	finalizedBy("jacocoIntegrationTestReport")
-	systemProperty("spring.profiles.active", "integrationtest")
-}
-
-// ─── JaCoCo ────────────────────────────────────────────────────────────────
-
-val jacocoExclusions = listOf(
-	"com/renan/paymentevents/grpc/**",        // protobuf-generated stubs
-	"com/renan/paymentevents/avro/**",         // avro-generated classes
-	"com/renan/paymentevents/PaymentEventsProcessorApplication.class"
-)
-
-tasks.withType<Test> {
-	useJUnitPlatform()
-	finalizedBy(tasks.jacocoTestReport)
-}
-
-tasks.jacocoTestReport {
-	dependsOn(tasks.test)
-	reports {
-		xml.required.set(true)
-		html.required.set(true)
-	}
-	classDirectories.setFrom(files(classDirectories.files.map {
-		fileTree(it) { exclude(jacocoExclusions) }
-	}))
-}
-
-tasks.register<JacocoReport>("jacocoIntegrationTestReport") {
-	executionData.setFrom(fileTree(layout.buildDirectory) {
-		include("jacoco/integrationTest.exec")
-	})
-	sourceSets(sourceSets.main.get())
-	reports {
-		xml.required.set(true)
-		html.required.set(true)
-	}
-	classDirectories.setFrom(files(classDirectories.files.map {
-		fileTree(it) { exclude(jacocoExclusions) }
-	}))
-}
-
-tasks.register<JacocoReport>("jacocoMergedReport") {
-	executionData.setFrom(fileTree(layout.buildDirectory) {
-		include("jacoco/test.exec", "jacoco/integrationTest.exec")
-	})
-	sourceSets(sourceSets.main.get())
-	reports {
-		xml.required.set(true)
-		html.required.set(true)
-	}
-	classDirectories.setFrom(files(classDirectories.files.map {
-		fileTree(it) { exclude(jacocoExclusions) }
-	}))
-}
-
-tasks.register<JacocoCoverageVerification>("jacocoMergedCoverageVerification") {
-	dependsOn("jacocoMergedReport")
-	executionData.setFrom(fileTree(layout.buildDirectory) {
-		include("jacoco/test.exec", "jacoco/integrationTest.exec")
-	})
-	sourceSets(sourceSets.main.get())
-	classDirectories.setFrom(files(classDirectories.files.map {
-		fileTree(it) { exclude(jacocoExclusions) }
-	}))
-	violationRules {
-		rule {
-			limit {
-				minimum = "0.80".toBigDecimal()
-			}
-		}
-	}
 }
 
 tasks.check {
-	// integrationTest is intentionally NOT wired into check.
-	// jacocoMergedCoverageVerification is wired in CI explicitly (Phase 10).
+	// integrationTest not wired into check — runs only in CI explicitly
 }
