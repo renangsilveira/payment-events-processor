@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
 import org.testcontainers.kafka.KafkaContainer;
 
 import java.time.Duration;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.doThrow;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class PaymentEventConsumerDlqIntegrationTest {
 
     @Autowired
