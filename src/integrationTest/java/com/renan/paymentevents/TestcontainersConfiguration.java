@@ -11,7 +11,10 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.Duration;
+import java.util.UUID;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfiguration {
@@ -38,10 +41,6 @@ public class TestcontainersConfiguration {
 
 	@Bean
 	public GenericContainer<?> schemaRegistryContainer(Network testNetwork) {
-		// Using Apicurio Registry (in-memory mode) instead of Confluent Schema Registry.
-		// Apicurio is much lighter (~50MB vs ~700MB) and starts in seconds vs minutes,
-		// making it suitable for CI environments. It exposes a Confluent-compatible API
-		// at /apis/ccompat/v7, so KafkaAvroSerializer works without any code changes.
 		return new GenericContainer<>(
 				DockerImageName.parse("apicurio/apicurio-registry-mem:2.6.2.Final"))
 				.withNetwork(testNetwork)
@@ -61,5 +60,19 @@ public class TestcontainersConfiguration {
 						+ ":" + schemaRegistryContainer.getMappedPort(8080)
 						+ "/apis/ccompat/v7"
 		);
+	}
+
+	@Bean
+	public DynamicPropertyRegistrar kafkaStreamsProperties() {
+		return registry -> {
+			try {
+				String tempDir = Files.createTempDirectory("kafka-streams-test-").toString();
+				String uniqueAppId = "payment-events-streams-test-" + UUID.randomUUID();
+				registry.add("spring.kafka.streams.state-dir", () -> tempDir);
+				registry.add("spring.kafka.streams.application-id", () -> uniqueAppId);
+			} catch (IOException e) {
+				throw new RuntimeException("Failed to configure Kafka Streams state dir", e);
+			}
+		};
 	}
 }
