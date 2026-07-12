@@ -155,6 +155,26 @@ tasks.jacocoTestCoverageVerification {
 	}
 }
 
+tasks.register<JacocoReport>("jacocoMergedReport") {
+	executionData.setFrom(fileTree(layout.buildDirectory) {
+		include("jacoco/test.exec", "jacoco/integrationTest.exec")
+	})
+	sourceSets(sourceSets.main.get())
+	reports {
+		xml.required.set(true)
+		html.required.set(true)
+	}
+	classDirectories.setFrom(files(classDirectories.files.map {
+		fileTree(it) {
+			exclude(
+				"com/renan/paymentevents/grpc/**",
+				"com/renan/paymentevents/avro/**",
+				"com/renan/paymentevents/PaymentEventsProcessorApplication.class"
+			)
+		}
+	}))
+}
+
 // NOTE: Coverage gate is intentionally set to 10% because it covers only the unit test
 // source set (./gradlew test). Integration tests (./gradlew integrationTest) cover the
 // remaining ~70% of the codebase but cannot be merged into this report due to
