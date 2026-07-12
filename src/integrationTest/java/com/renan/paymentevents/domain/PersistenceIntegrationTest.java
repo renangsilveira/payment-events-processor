@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -22,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
+@Transactional
 class PersistenceIntegrationTest {
 
     @Autowired
@@ -32,6 +34,9 @@ class PersistenceIntegrationTest {
 
     @Autowired
     private ProcessedEventRepository processedEventRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void persistsAndRetrievesPaymentByIdempotencyKey() {
@@ -49,15 +54,15 @@ class PersistenceIntegrationTest {
 
     @Test
     void rejectsDuplicateIdempotencyKey() {
-        paymentRepository.save(Payment.createPending(1000L, "USD", "duplicate-key", "fake-fingerprint-for-test"));
+        paymentRepository.save(Payment.createPending(1000L, "USD", "duplicate-key", "fp-1"));
         paymentRepository.flush();
 
-        Payment duplicate = Payment.createPending(2000L, "USD", "duplicate-key", "fake-fingerprint-for-test");
+        Payment duplicate = Payment.createPending(2000L, "USD", "duplicate-key", "fp-2");
 
         assertThatThrownBy(() -> {
             paymentRepository.save(duplicate);
             paymentRepository.flush();
-        }).isInstanceOf(DataIntegrityViolationException.class);
+        }).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     @Test
@@ -79,15 +84,19 @@ class PersistenceIntegrationTest {
     }
 
     @Test
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void persistsProcessedEventAndRejectsDuplicateOnReinsert() {
         UUID eventId = UUID.randomUUID();
         processedEventRepository.save(ProcessedEvent.of(eventId));
         processedEventRepository.flush();
 
-        assertThatThrownBy(() -> {
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-            processedEventRepository.flush();
-        }).isInstanceOf(DataIntegrityViolationException.class);
+        // Spring Data JPA's save() uses merge() for manually-assigned IDs,
+        // which does SELECT then UPDATE if found — no constraint violation.
+        // Use JdbcTemplate to force a raw INSERT that hits the PK constraint.
+        assertThatThrownBy(() ->
+                jdbcTemplate.update(
+                        "INSERT INTO processed_events (event_id, processed_at) VALUES (?, NOW())",
+                        eventId
+                )
+        ).isInstanceOf(DataIntegrityViolationException.class);
     }
 }
