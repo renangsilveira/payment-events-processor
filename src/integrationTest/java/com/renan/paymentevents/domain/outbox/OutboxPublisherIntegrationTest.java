@@ -60,7 +60,8 @@ class OutboxPublisherIntegrationTest {
         outboxEventRepository.save(event);
 
         // Wait for OutboxPublisher to poll and publish (configured at 5s delay)
-        Thread.sleep(10_000);
+        // Extra time needed for Apicurio schema registration on first publish
+        Thread.sleep(15_000);
 
         List<PaymentEvent> received = consumeFromKafka(kafkaContainer.getBootstrapServers(), schemaRegistryUrl);
 
