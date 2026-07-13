@@ -91,19 +91,23 @@ public class TestcontainersConfiguration {
 	DynamicPropertyRegistrar testProperties() {
 		return registry -> {
 			try {
-				// Unique state dir prevents Kafka Streams state directory conflicts
-				// when multiple Spring contexts run in the same JVM process.
 				String tempDir = Files.createTempDirectory("kafka-streams-test-").toString();
 				String uniqueAppId = "payment-events-streams-test-" + UUID.randomUUID();
 				registry.add("spring.kafka.streams.state-dir", () -> tempDir);
 				registry.add("spring.kafka.streams.application-id", () -> uniqueAppId);
-
-				// Random gRPC port prevents port 9090 conflicts between contexts.
-				// Tests that need a specific port (e.g. in-process mode) override
-				// this via @SpringBootTest(properties = {"grpc.server.port=-1"}).
 				registry.add("grpc.server.port", () -> "0");
+
+				// Unique consumer group per context prevents rebalancing conflicts
+				// when multiple Spring contexts run consumers in the same JVM process.
+				String uniqueGroupId = "payment-processor-" + UUID.randomUUID();
+				registry.add("spring.kafka.consumer.group-id", () -> uniqueGroupId);
+
+				// Keep DB connections alive during long-running tests (e.g. DLQ test sleeps 60s).
+				// Without this, Postgres closes idle connections and HikariCP can't reconnect.
+				registry.add("spring.datasource.hikari.keepalive-time", () -> "15000");
+				registry.add("spring.datasource.hikari.max-lifetime", () -> "120000");
 			} catch (IOException e) {
-				throw new RuntimeException("Failed to configure Kafka Streams state dir for tests", e);
+				throw new RuntimeException("Failed to configure test properties", e);
 			}
 		};
 	}

@@ -40,7 +40,13 @@ public class PaymentEventConsumer {
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
             dltTopicSuffix = "-dlt"
     )
-    @KafkaListener(topics = "payment.events.v1", groupId = "payment-processor")
+
+    // NOTE: groupId is intentionally NOT hardcoded here.
+    // It uses spring.kafka.consumer.group-id from application.properties (production: "payment-processor").
+    // In integration tests, TestcontainersConfiguration overrides this with a unique UUID per context,
+    // preventing consumer group conflicts when multiple contexts run in the same JVM.
+
+    @KafkaListener(topics = "payment.events.v1")
     public void consume(ConsumerRecord<String, PaymentEvent> record,
                         @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         PaymentEvent event = record.value();

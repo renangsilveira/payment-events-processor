@@ -34,7 +34,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = {"grpc.server.port=0"})
+@SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class PaymentEventConsumerDlqIntegrationTest {
 
@@ -68,7 +68,7 @@ class PaymentEventConsumerDlqIntegrationTest {
 
         // Wait long enough for all retries to exhaust:
         // 4 attempts × max 10s backoff = up to 40s, but typically much less
-        Thread.sleep(35_000);
+        Thread.sleep(60_000);
 
         List<PaymentEvent> dltMessages = consumeFromDlt(kafkaContainer.getBootstrapServers(), schemaRegistryUrl);
 
