@@ -13,13 +13,11 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
-import org.testcontainers.kafka.KafkaContainer;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -38,8 +36,10 @@ import static org.mockito.Mockito.doThrow;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class PaymentEventConsumerDlqIntegrationTest {
 
-    @Autowired
-    private KafkaContainer kafkaContainer;
+    // Replaced @Autowired KafkaContainer with @Value to avoid depending on
+    // the container as a Spring bean (which would let Spring stop the static container).
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String bootstrapServers;
 
     @Value("${spring.kafka.properties.schema.registry.url}")
     private String schemaRegistryUrl;
@@ -64,13 +64,19 @@ class PaymentEventConsumerDlqIntegrationTest {
                 .setOccurredAt(Instant.now())
                 .build();
 
+        // Wait 3 seconds before publishing to ensure the @KafkaListener consumer
+        // (with auto.offset.reset=latest) has completed rebalancing and is
+        // actively subscribed to the partition. Without this, the message might
+        // arrive before the consumer is assigned and be missed entirely.
+        Thread.sleep(3_000);
+
         publishToKafka("payment.events.v1", paymentId, event);
 
-        // Wait long enough for all retries to exhaust:
-        // 4 attempts × max 10s backoff = up to 40s, but typically much less
+        // Wait for all retries to exhaust:
+        // 4 attempts × backoffs (1s, 2s, 4s) + rebalancing overhead = ~60s
         Thread.sleep(60_000);
 
-        List<PaymentEvent> dltMessages = consumeFromDlt(kafkaContainer.getBootstrapServers(), schemaRegistryUrl);
+        List<PaymentEvent> dltMessages = consumeFromDlt(bootstrapServers, schemaRegistryUrl);
 
         assertThat(dltMessages)
                 .filteredOn(e -> e.getPaymentId().toString().equals(paymentId))
@@ -79,7 +85,7 @@ class PaymentEventConsumerDlqIntegrationTest {
 
     private void publishToKafka(String topic, String key, PaymentEvent event) {
         try (KafkaProducer<String, PaymentEvent> producer = new KafkaProducer<>(Map.of(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers(),
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
                 ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, org.apache.kafka.common.serialization.StringSerializer.class,
                 ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class,
                 "schema.registry.url", schemaRegistryUrl
@@ -115,3 +121,4 @@ class PaymentEventConsumerDlqIntegrationTest {
         return results;
     }
 }
+ 

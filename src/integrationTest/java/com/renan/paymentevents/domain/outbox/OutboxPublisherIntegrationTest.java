@@ -16,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.testcontainers.kafka.KafkaContainer;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -36,8 +35,10 @@ class OutboxPublisherIntegrationTest {
     @Autowired
     private OutboxEventRepository outboxEventRepository;
 
-    @Autowired
-    private KafkaContainer kafkaContainer;
+    // Replaced @Autowired KafkaContainer with @Value to avoid depending on
+    // the container as a Spring bean (which would let Spring stop the static container).
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String bootstrapServers;
 
     @Value("${spring.kafka.properties.schema.registry.url}")
     private String schemaRegistryUrl;
@@ -60,10 +61,9 @@ class OutboxPublisherIntegrationTest {
         outboxEventRepository.save(event);
 
         // Wait for OutboxPublisher to poll and publish (configured at 5s delay)
-        // Extra time needed for Apicurio schema registration on first publish
         Thread.sleep(15_000);
 
-        List<PaymentEvent> received = consumeFromKafka(kafkaContainer.getBootstrapServers(), schemaRegistryUrl);
+        List<PaymentEvent> received = consumeFromKafka(bootstrapServers, schemaRegistryUrl);
 
         PaymentEvent published = received.stream()
                 .filter(e -> e.getPaymentId().equals(savedPayment.getId().toString()))
@@ -80,7 +80,7 @@ class OutboxPublisherIntegrationTest {
     private List<PaymentEvent> consumeFromKafka(String bootstrapServers, String schemaRegistryUrl) {
         KafkaConsumer<String, PaymentEvent> consumer = new KafkaConsumer<>(Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
-                ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-" + UUID.randomUUID(),
+                ConsumerConfig.GROUP_ID_CONFIG, "test-outbox-consumer-" + UUID.randomUUID(),
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
                 ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
                 ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class,

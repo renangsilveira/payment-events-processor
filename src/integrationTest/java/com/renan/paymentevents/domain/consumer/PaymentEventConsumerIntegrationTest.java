@@ -5,21 +5,19 @@ import com.renan.paymentevents.avro.PaymentEvent;
 import com.renan.paymentevents.avro.PaymentResultEvent;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import io.confluent.kafka.serializers.KafkaAvroSerializer;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.testcontainers.kafka.KafkaContainer;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -34,8 +32,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 class PaymentEventConsumerIntegrationTest {
 
-    @Autowired
-    private KafkaContainer kafkaContainer;
+    // Replaced @Autowired KafkaContainer with @Value to avoid depending on
+    // the container as a Spring bean (which would let Spring stop the static container).
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String bootstrapServers;
 
     @Value("${spring.kafka.properties.schema.registry.url}")
     private String schemaRegistryUrl;
@@ -57,7 +57,7 @@ class PaymentEventConsumerIntegrationTest {
 
         Thread.sleep(8000);
 
-        List<PaymentResultEvent> results = consumeResults(kafkaContainer.getBootstrapServers(), schemaRegistryUrl);
+        List<PaymentResultEvent> results = consumeResults(bootstrapServers, schemaRegistryUrl);
 
         assertThat(results)
                 .filteredOn(r -> r.getPaymentId().toString().equals(paymentId))
@@ -83,28 +83,25 @@ class PaymentEventConsumerIntegrationTest {
                 .setOccurredAt(Instant.now())
                 .build();
 
-        // Publish same message twice to the same partition/offset simulation
-        // We publish to a dedicated partition to control offset-based deduplication
         publishToKafka("payment.events.v1", paymentId, event);
         publishToKafka("payment.events.v1", paymentId, event);
 
         Thread.sleep(10_000);
 
-        List<PaymentResultEvent> results = consumeResults(kafkaContainer.getBootstrapServers(), schemaRegistryUrl);
+        List<PaymentResultEvent> results = consumeResults(bootstrapServers, schemaRegistryUrl);
 
         long countForPayment = results.stream()
                 .filter(r -> r.getPaymentId().toString().equals(paymentId))
                 .count();
 
-        // Two messages published, but since they have different offsets, both will be processed
-        // (offset-based deduplication means same offset = duplicate, different offset = new message)
-        // This test verifies the consumer handles both messages gracefully without error
+        // Two messages with different offsets — both processed (offset-based dedup),
+        // but without error.
         assertThat(countForPayment).isGreaterThanOrEqualTo(1);
     }
 
     private void publishToKafka(String topic, String key, PaymentEvent event) {
         try (KafkaProducer<String, PaymentEvent> producer = new KafkaProducer<>(Map.of(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers(),
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
                 ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, org.apache.kafka.common.serialization.StringSerializer.class,
                 ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class,
                 "schema.registry.url", schemaRegistryUrl
