@@ -57,7 +57,8 @@ class PaymentEventConsumerIntegrationTest {
 
         Thread.sleep(8000);
 
-        List<PaymentResultEvent> results = consumeResults(bootstrapServers, schemaRegistryUrl);
+        // Passa o paymentId alvo
+        List<PaymentResultEvent> results = consumeResults(bootstrapServers, schemaRegistryUrl, paymentId);
 
         assertThat(results)
                 .filteredOn(r -> r.getPaymentId().toString().equals(paymentId))
@@ -88,14 +89,11 @@ class PaymentEventConsumerIntegrationTest {
 
         Thread.sleep(10_000);
 
-        List<PaymentResultEvent> results = consumeResults(bootstrapServers, schemaRegistryUrl);
+        List<PaymentResultEvent> results = consumeResults(bootstrapServers, schemaRegistryUrl, paymentId);
 
         long countForPayment = results.stream()
                 .filter(r -> r.getPaymentId().toString().equals(paymentId))
                 .count();
-
-        // Two messages with different offsets — both processed (offset-based dedup),
-        // but without error.
         assertThat(countForPayment).isGreaterThanOrEqualTo(1);
     }
 
@@ -111,7 +109,8 @@ class PaymentEventConsumerIntegrationTest {
         }
     }
 
-    private List<PaymentResultEvent> consumeResults(String bootstrapServers, String schemaRegistryUrl) {
+    private List<PaymentResultEvent> consumeResults(String bootstrapServers, String schemaRegistryUrl,
+                                                    String targetPaymentId) {
         KafkaConsumer<String, PaymentResultEvent> consumer = new KafkaConsumer<>(Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
                 ConsumerConfig.GROUP_ID_CONFIG, "test-result-consumer-" + UUID.randomUUID(),
@@ -132,7 +131,12 @@ class PaymentEventConsumerIntegrationTest {
             for (ConsumerRecord<String, PaymentResultEvent> record : records) {
                 results.add(record.value());
             }
-            if (!results.isEmpty()) break;
+            // Break only when the TARGET paymentId is found.
+            // Don't break on any result — payment.results.v1 accumulates
+            // messages from previous test contexts (earliest offset reset).
+            boolean found = results.stream()
+                    .anyMatch(r -> r.getPaymentId().toString().equals(targetPaymentId));
+            if (found) break;
         }
 
         consumer.close();

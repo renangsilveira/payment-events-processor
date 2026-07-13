@@ -76,7 +76,7 @@ class PaymentEventConsumerDlqIntegrationTest {
         // 4 attempts × backoffs (1s, 2s, 4s) + rebalancing overhead = ~60s
         Thread.sleep(60_000);
 
-        List<PaymentEvent> dltMessages = consumeFromDlt(bootstrapServers, schemaRegistryUrl);
+        List<PaymentEvent> dltMessages = consumeFromDlt(bootstrapServers, schemaRegistryUrl, paymentId);
 
         assertThat(dltMessages)
                 .filteredOn(e -> e.getPaymentId().toString().equals(paymentId))
@@ -95,7 +95,8 @@ class PaymentEventConsumerDlqIntegrationTest {
         }
     }
 
-    private List<PaymentEvent> consumeFromDlt(String bootstrapServers, String schemaRegistryUrl) {
+    private List<PaymentEvent> consumeFromDlt(String bootstrapServers, String schemaRegistryUrl,
+                                              String targetPaymentId) {
         KafkaConsumer<String, PaymentEvent> consumer = new KafkaConsumer<>(Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
                 ConsumerConfig.GROUP_ID_CONFIG, "test-dlt-consumer-" + UUID.randomUUID(),
@@ -114,11 +115,12 @@ class PaymentEventConsumerDlqIntegrationTest {
         while (System.currentTimeMillis() < deadline) {
             ConsumerRecords<String, PaymentEvent> records = consumer.poll(Duration.ofSeconds(1));
             records.forEach(r -> results.add(r.value()));
-            if (!results.isEmpty()) break;
+            boolean found = results.stream()
+                    .anyMatch(e -> e.getPaymentId().toString().equals(targetPaymentId));
+            if (found) break;
         }
 
         consumer.close();
         return results;
     }
 }
- 

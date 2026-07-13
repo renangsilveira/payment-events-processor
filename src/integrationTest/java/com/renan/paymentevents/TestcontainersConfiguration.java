@@ -87,11 +87,6 @@ public class TestcontainersConfiguration {
 			String uniqueGroupId = "payment-processor-" + UUID.randomUUID();
 			registry.add("spring.kafka.consumer.group-id", () -> uniqueGroupId);
 
-			// Use 'latest' offset reset so @KafkaListener only processes messages
-			// published AFTER the consumer subscribes. This prevents messages from
-			// previous test contexts from interfering with the current test.
-			registry.add("spring.kafka.consumer.auto-offset-reset", () -> "latest");
-
 			// Kafka Streams — unique state dir and application-id per context
 			try {
 				String tempDir = Files.createTempDirectory("kafka-streams-test-").toString();
