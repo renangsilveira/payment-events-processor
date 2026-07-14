@@ -67,7 +67,7 @@ class PaymentEventConsumerIntegrationTest {
                 .satisfies(r -> {
                     assertThat(r.getResult().toString()).isEqualTo("SUCCESS");
                     assertThat(r.getStatus().toString()).isEqualTo("AUTHORIZED");
-                    assertThat(r.getErrorMessage()).isNull();
+                    assertThat(r.getErrorMessage()).isEmpty();
                 });
     }
 
