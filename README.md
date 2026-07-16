@@ -222,3 +222,11 @@ src/
 
 **Renan Silveira** — Backend Engineer  
 [linkedin.com/in/renangsilveira](https://linkedin.com/in/renangsilveira) · [github.com/renangsilveira](https://github.com/renangsilveira)
+
+---
+
+## License
+
+[#license](#license)
+
+MIT © Renan G. Silveira
